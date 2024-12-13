@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .tab {
+            margin: 0 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .tab.active {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .gallery {
+            display: none;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .gallery.active {
+            display: flex;
+        }
+        .gallery-item {
+            text-align: center;
+        }
+        .gallery img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .gallery audio {
+            margin-top: 10px;
+            width: 150px;
+        }
+        .error {
+            color: red;
+        }
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border: 2px solid #fff;
+        }
+        #modal.close {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Uploaded Dashboard</h1>
+    <div class="controls">
+        <button onclick="loadMedia()">Refresh Dashboard</button>
+    </div>
+    <p id="media-count"></p>
+    <div id="error-message" class="error"></div>
+
+    <div class="tabs">
+        <div class="tab active" data-target="images-gallery">Images</div>
+        <div class="tab" data-target="audios-gallery">Audios</div>
+    </div>
+
+    <div id="images-gallery" class="gallery active">
+        <!-- Images will appear here -->
+    </div>
+    <div id="audios-gallery" class="gallery">
+        <!-- Audios will appear here -->
+    </div>
+
+    <!-- Modal for Enlarged Image -->
+    <div id="modal" onclick="closeModal()">
+        <img id="modal-img" src="" alt="Enlarged">
+    </div>
+
+    <script>
+        async function loadMedia() {
+            const imagesGallery = document.getElementById('images-gallery');
+            const audiosGallery = document.getElementById('audios-gallery');
+            const errorMessage = document.getElementById('error-message');
+            const mediaCount = document.getElementById('media-count');
+
+            // Clear previous content
+            imagesGallery.innerHTML = '';
+            audiosGallery.innerHTML = '';
+            errorMessage.textContent = '';
+            mediaCount.textContent = '';
+
+            try {
+                const response = await fetch('/uploaded-media'); // Endpoint to list images and audio
+                if (!response.ok) throw new Error('Failed to fetch media.');
+                const media = await response.json();
+
+                if (media.length === 0) {
+                    errorMessage.textContent = 'No media uploaded yet.';
+                    return;
+                }
+
+                let imageCount = 0;
+                let audioCount = 0;
+
+                media.forEach(item => {
+                    const galleryItem = document.createElement('div');
+                    galleryItem.className = 'gallery-item';
+
+                    if (item.type === 'image') {
+                        const imgElement = document.createElement('img');
+                        imgElement.src = item.url;
+                        imgElement.alt = 'Uploaded Image';
+                        imgElement.onclick = () => openModal(item.url); // Open modal on click
+                        galleryItem.appendChild(imgElement);
+                        imagesGallery.appendChild(galleryItem);
+                        imageCount++;
+                    } else if (item.type === 'audio') {
+                        const audioElement = document.createElement('audio');
+                        audioElement.controls = true;
+                        audioElement.src = item.url;
+                        galleryItem.appendChild(audioElement);
+                        audiosGallery.appendChild(galleryItem);
+                        audioCount++;
+                    }
+                });
+
+                mediaCount.textContent = `Images: ${imageCount}, Audios: ${audioCount}`;
+            } catch (error) {
+                errorMessage.textContent = `Error: ${error.message}`;
+                console.error('Error loading media:', error);
+            }
+        }
+
+        function openModal(imageUrl) {
+            const modal = document.getElementById('modal');
+            const modalImg = document.getElementById('modal-img');
+            modalImg.src = imageUrl;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+        }
+
+        // Tab switching functionality
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Update tab active state
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Show the corresponding gallery
+                const target = tab.getAttribute('data-target');
+                document.querySelectorAll('.gallery').forEach(gallery => {
+                    gallery.classList.remove('active');
+                });
+                document.getElementById(target).classList.add('active');
+            });
+        });
+
+        // Load media on page load
+        window.onload = loadMedia;
+    </script>
+</body>
+</html>
