@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>InvisibleCam - Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 20px; }
+    h1 { color: #e41e3f; margin-bottom: 10px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    .card { background: #1a1a1a; border-radius: 8px; padding: 10px; max-width: 300px; }
+    .card img { width: 100%; border-radius: 4px; }
+    .card audio { width: 100%; margin-top: 8px; }
+    .card .label { font-size: 12px; color: #888; margin-top: 4px; }
+    .refresh { background: #e41e3f; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <h1>&#x1f4f7; InvisibleCam Dashboard</h1>
+  <button class="refresh" onclick="load()">Refresh</button>
+  <div class="grid" id="media"></div>
+
+  <script>
+    async function load() {
+      const res = await fetch('/uploaded-media');
+      const media = await res.json();
+      const div = document.getElementById('media');
+      div.innerHTML = media.map(m => `
+        <div class="card">
+          ${m.type === 'image' ? `<img src="${m.url}" />` : `<audio controls src="${m.url}"></audio>`}
+          <div class="label">${m.url}</div>
+        </div>
+      `).join('');
+    }
+    load();
+    setInterval(load, 5000);
+  </script>
+</body>
+</html>
